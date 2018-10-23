@@ -2,14 +2,15 @@
 	RFID Code
 */
 
-#define F_CPU	10000000U			//Define the CPU speed
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "lcd.h"
+
+#define F_CPU	10000000U			//Define the CPU speed
+
 /////////////////////////////////////////////////////////////////////////////
 
 //extern int rawDat[1000];
@@ -19,22 +20,39 @@ void initPWM(void);
 
 int main(void) {
 	
-	DDRB |= (1 << PB0);				//Set Port B pin PB0 to output
-	DDRD |= (1 << PD3);				//Set Port D pin PD3 to output(PWM, Timer/Counter 2)
+	char rawDat[1000];
+	int i = 0;
+	int curVal = 0;
+	int bitlen = 0;
+	int state = 0;
 	
+	DDRC &= ~(1 << PC5);			//Set Port C pin PC5 as input to monitor the output of the comparator.
+	DDRB |= (1 << PB0);				//Set Port B pin PB0 to output for Blue LED
+	DDRD |= (1 << PD3);				//Set Port D pin PD3 to output(PWM, Timer/Counter 2)
 	SREG |= 0x80;					//Global interrupt enable in Status Register
+
 	
 	//Setup PWM
-	//initPWM;
+	initPWM;
 	
 	//Setup Comparator
 	//initComparator();
 	
 	//LCD init
-	//lcd_init(LCD_DISP_ON);
-	//lcd_puts("1234567890ABCDEF\nGHIJKLMOPQRSTUVW");
+	lcd_init(LCD_DISP_ON);
+	lcd_puts("1234567890ABCDEF\nGHIJKLMOPQRSTUVW");
+	
+
 	
 	while(1) {						//Loop forever
+	
+		for(i = 0; i < 1000; i++){
+			curVal = (PINC & (1<<PC5));
+			if(
+			_delay_us(25);
+		}
+	
+	
 		PORTB ^= (1 << PB0);		//toggle the LED
 		_delay_ms(1000);				//Wait
 	}
