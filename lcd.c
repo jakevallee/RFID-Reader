@@ -18,6 +18,8 @@
        See the C include lcd.h file for a description of each function
        
 *****************************************************************************/
+#define F_CPU	10000000UL		//Define clock frequency
+
 #include <inttypes.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
