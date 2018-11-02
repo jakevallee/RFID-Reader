@@ -32,13 +32,13 @@ void writeSER(char c[]);
 
 int main(void) {
 	
-	//char rawDat[1000];
-	//int i = 0;
-	//int curVal = 0;
+	char rawDat[1000];
+	int i = 0;
+	int curVal = 0;
+	int here;
 	//int bitlen = 0;
 	//int state = 0;
 	
-	sei();
 	
 	/* Set Port C pin PC5 as input to monitor the output of the comparator.*/
 	DDRC &= ~(1 << PC5);			
@@ -47,7 +47,7 @@ int main(void) {
 	DDRB |= (1 << PB0);				
 	
 	/* Set Port D pin PD3 to output(PWM, Timer/Counter 2) */
-	//DDRD |= (1 << PD3);				
+	DDRD |= (1 << PD3);				
 	
 	/* Enable Global Interrupt */
 	//SREG |= 0x80;
@@ -57,7 +57,7 @@ int main(void) {
 	initUSART();
 	
 	/* Setup PWM */
-	//initPWM;
+	initPWM();
 	
 	/* Setup Comparator */
 	//initComparator();
@@ -65,25 +65,40 @@ int main(void) {
 	
 	/* LCD initialization */
 	lcd_init(LCD_DISP_ON);
-	lcd_puts("Coding\nis\nsuper\nfun");
 	
 	
 	
-	while(1) {						//Loop forever
 	
-	writeSER("YeeHaww\n\r");
-	_delay_ms(1000);
-	/*	for(i = 0; i < 1000; i++){
+	//while(1) {						//Loop forever
+	
+		//writeSER("YeeHaww\n\r");
+
+	
+		for(i = 0; i < 1000; i++){
 			curVal = (PINC & (1<<PC5));
-			if(
-			_delay_us(25);
+			if(curVal==1){
+				rawDat[i] = 49;
+				here = i;
+			} else if (curVal==0) {
+				rawDat[i] = 48;
+			} else {
+				rawDat[i] = 50;
+			}
+			_delay_us(50);
+			
 		}
+		lcd_command(LCD_HOME);
+		lcd_puts();
+		
+		//for(i = 0; i < 1000; i++){
+			writeSER(&rawDat[500]);
+			//_delay_us(1000);
+		//}
 	
+		//PORTB ^= (1 << PB0);		//toggle the LED
+		//_delay_ms(1000);			//Wait
 	
-		PORTB ^= (1 << PB0);		//toggle the LED
-		_delay_ms(1000);				//Wait
-	*/
-	}
+	//}
 	
 	return(0);
 }
