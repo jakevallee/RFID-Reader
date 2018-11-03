@@ -33,9 +33,10 @@ void writeSER(char c[]);
 int main(void) {
 	
 	char rawDat[1000];
+	//char test = 'T';
 	int i = 0;
-	int curVal = 0;
-	int here;
+	//int curVal = 0;
+	//int here;
 	//int bitlen = 0;
 	//int state = 0;
 	
@@ -74,27 +75,37 @@ int main(void) {
 		//writeSER("YeeHaww\n\r");
 
 	
-		for(i = 0; i < 1000; i++){
-			curVal = (PINC & (1<<PC5));
-			if(curVal==1){
-				rawDat[i] = 49;
-				here = i;
-			} else if (curVal==0) {
-				rawDat[i] = 48;
+		for(i = 0; i < 1000; i++){		//used to fill buffer with data from comparator
+			if(PINC & (1<<PC5)){
+				rawDat[i] = '1';
 			} else {
-				rawDat[i] = 50;
+				rawDat[i] = '0';
 			}
-			_delay_us(50);
+			_delay_us(25);
 			
 		}
-		lcd_command(LCD_HOME);
-		lcd_puts();
 		
-		//for(i = 0; i < 1000; i++){
-			writeSER(&rawDat[500]);
-			//_delay_us(1000);
-		//}
-	
+		/*for(i=0;i<1000;i++){		//Used for testing
+			if(i%2==0){
+				rawDat[i] = '1';
+			} else {
+				rawDat[i] = '0';
+			}
+		}*/
+	//_delay_ms(200);
+	//writeSER("what\n\r");
+		
+		for(i=0;i<1000;i++){		//Because the USART transmission can only happen so fast
+			if(rawDat[i] == '1'){	//This for loop must be used in order to print the values 
+				writeSER("1");
+			} else if(rawDat[i] == '0'){
+				writeSER("0");
+			} else {
+				writeSER("2");
+			}
+			_delay_ms(200);
+		}
+		
 		//PORTB ^= (1 << PB0);		//toggle the LED
 		//_delay_ms(1000);			//Wait
 	
@@ -113,7 +124,6 @@ ISR(USART_TX_vect){
 			rdINDEX = 0;
 		}
 	}
-	
 }
 
 void changeSER(char c){
