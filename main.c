@@ -32,7 +32,7 @@ void writeSER(char c[]);
 
 int main(void) {
 	
-	char rawDat[1000];
+	char rawDat[1500];
 	//char test = 'T';
 	int i = 0;
 	//int curVal = 0;
@@ -70,46 +70,46 @@ int main(void) {
 	
 	
 	
-	//while(1) {						//Loop forever
+	while(1) {						//Loop forever
 	
 		//writeSER("YeeHaww\n\r");
 
 	
-		for(i = 0; i < 1000; i++){		//used to fill buffer with data from comparator
+		/*for(i = 0; i < 1500; i++){		//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
 				rawDat[i] = '1';
 			} else {
 				rawDat[i] = '0';
 			}
-			_delay_us(25);
+			_delay_us(50);
 			
-		}
+		}*/
 		
-		/*for(i=0;i<1000;i++){		//Used for testing
+		/*for(i=0;i<1000;i++){				//Used for testing
 			if(i%2==0){
 				rawDat[i] = '1';
 			} else {
 				rawDat[i] = '0';
 			}
 		}*/
-	//_delay_ms(200);
-	//writeSER("what\n\r");
+
 		
-		for(i=0;i<1000;i++){		//Because the USART transmission can only happen so fast
-			if(rawDat[i] == '1'){	//This for loop must be used in order to print the values 
+		/*for(i=0;i<1500;i++){				//Because the USART transmission can only happen so fast
+			if(rawDat[i] == '1'){			//This for loop must be used in order to print the values 
 				writeSER("1");
 			} else if(rawDat[i] == '0'){
 				writeSER("0");
 			} else {
 				writeSER("2");
 			}
-			_delay_ms(200);
-		}
+			_delay_ms(50);
+		}*/
 		
-		//PORTB ^= (1 << PB0);		//toggle the LED
-		//_delay_ms(1000);			//Wait
+		PORTB ^= (1 << PB0);				//toggle the LED
+		writeSER("this chip works\n\r");
+		_delay_ms(1000);					//Wait
 	
-	//}
+	}
 	
 	return(0);
 }
