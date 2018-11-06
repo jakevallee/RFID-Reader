@@ -29,6 +29,9 @@ void initComparator(void);
 void initPWM(void);
 void changeSER(char c);
 void writeSER(char c[]);
+void initSpeaker(void);
+void stopSpeaker(void);
+void failSpeaker(void);
 
 int main(void) {
 	
@@ -45,10 +48,13 @@ int main(void) {
 	DDRC &= ~(1 << PC5);			
 	
 	/* Set Port B pin PB0 to output for Blue LED */
-	DDRB |= (1 << PB0);				
+	DDRB |=  (1 << PB0);				
 	
-	/* Set Port D pin PD3 to output(PWM, Timer/Counter 2) */
-	DDRD |= (1 << PD3);				
+	/* Set Port D pin PD3 to output for carrier signal -- OC2B */
+	DDRD |=  (1 << PD3);				
+	
+	/* Set Port D pin PB1 to output for speaker -- OC1B */
+	DDRB |=  (1 << PB2);                   
 	
 	/* Enable Global Interrupt */
 	//SREG |= 0x80;
@@ -63,10 +69,12 @@ int main(void) {
 	/* Setup Comparator */
 	//initComparator();
 	
+	/* Setup Speaker */
+	//initSpeaker();
 	
 	/* LCD initialization */
 	lcd_init(LCD_DISP_ON);
-	
+	lcd_puts("RFID Tag Here");
 	
 	
 	
@@ -106,9 +114,16 @@ int main(void) {
 		}*/
 		
 		PORTB ^= (1 << PB0);				//toggle the LED
-		writeSER("this chip works\n\r");
+		initSpeaker();
+		_delay_ms(100);
+		stopSpeaker();
+		//writeSER("this chip works\n\r");
 		_delay_ms(1000);					//Wait
-	
+		failSpeaker();
+		_delay_ms(100);
+		stopSpeaker();
+		_delay_ms(1000);
+		
 	}
 	
 	return(0);
@@ -180,6 +195,54 @@ void initPWM(void){
 	OCR2A = 79;				//output compare, 50% duty cycle. 
 	OCR2B = 39;	
 	
+}
+
+void initSpeaker(void) {
+	
+	
+	//////////////////////////
+	//	Setup PWM on PB2,	//
+	//						//
+	//////////////////////////
+	
+	TCCR1A |= (1<<COM1A1);	//Set Non-inverting mode
+	TCCR1A |= (1<<COM1B1);	//Set Non-inverting mode
+	
+	TCCR1A |= (1<<WGM11);	//Fast PWM with top 0x03FF
+	TCCR1A |= (1<<WGM10);	//'' 
+	TCCR1B |= (1<<WGM12);	//''
+	
+	TCCR1B |= (1<<CS11);	//Sets prescalar (clk/8) and starts PWM
+	
+	//ICR1 = 1500;
+	OCR1B = 100;			//Used to set Duty Cycle
+	
+}
+
+void failSpeaker(void){
+	
+	//////////////////////////
+	//	Setup PWM on PB2,	//
+	//	play a tone for 	//
+	//	unsuccessful read	//
+	//////////////////////////
+	
+	TCCR1A |= (1<<COM1A1);			//Set Non-inverting mode
+	TCCR1A |= (1<<COM1B1);			//Set Non-inverting mode
+	
+	TCCR1A |= (1<<WGM11);			//Fast PWM with top 0x03FF
+	TCCR1A |= (1<<WGM10);			//'' 
+	TCCR1B |= (1<<WGM12);			//''
+	
+	TCCR1B |= (1<<CS11)|(1<<CS10);	//Sets prescalar (clk/64) and starts PWM
+	
+	//ICR1 = 1500;
+	OCR1B = 100;			//Used to set Duty Cycle	
+	
+}
+
+void stopSpeaker(void){
+	TCCR1B &= (0<<CS21)|(0<<CS11)|(0<<CS10);	//disables PWM
 }
 
 void initComparator(void) {
