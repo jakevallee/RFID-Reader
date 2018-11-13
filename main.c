@@ -97,20 +97,7 @@ int main(void) {
 			
 		}
 		
-		
-		
 		/*
-		for(i=0;i<1000;i++){				//Used for testing
-			if(i%2==0){
-				rawDat[i] = 1;
-			} else {
-				rawDat[i] = 0;
-			}
-		}
-		*/
-		
-
-		
 		for(i=0;i<1500;i++){				//Because the USART transmission can only happen so fast
 			if(rawDat[i] == '1'){			//This for loop must be used in order to print the values 
 				writeSER("1");
@@ -121,12 +108,13 @@ int main(void) {
 			}
 			_delay_ms(50);
 		}
+		*/
 		
 		i = 0;
 		j = 0;
 		lastVal = '2';
 		check = 0;
-		sameNum = 1;
+		sameNum = 0;
 		
 		orig = (rawDat[0] == '1');
 		for(i=0;i<1500 && check == 0;i++){		//First need to find the first point that the state switches.
@@ -137,6 +125,7 @@ int main(void) {
 			}
 		}
 		
+		lastVal = rawDat[start];
 		for(i=start;i<(1500-start);i++){
 			curVal = rawDat[i];
 			if(curVal == lastVal){
@@ -146,28 +135,31 @@ int main(void) {
 					manchDat[j] = lastVal;
 				} else if(sameNum >= 8 && sameNum <= 11){
 					manchDat[j] = lastVal;
-					j++
+					j++;
 					manchDat[j] = lastVal;
 				} else {
 					//last bit sequence was either too long or too short.
+					//this means probably bad data... recollect.
+					break;
 				}
 				j++;
 			}
 			lastVal = curVal;
-			
+	
 		}
 		
+		for(i=0;i<350;i++){				
+			if(manchDat[i] == '1'){			
+				writeSER("1");
+			} else if(manchDat[i] == '0'){
+				writeSER("0");
+			} else {
+				writeSER("2");
+			}
+			_delay_ms(50);
+		}
 		
-		
-		PORTB ^= (1 << PB0);				//toggle the LED
-		initSpeaker();
-		_delay_ms(100);
-		stopSpeaker();
-		_delay_ms(1000);					//Wait
-		failSpeaker();
-		_delay_ms(100);
-		stopSpeaker();
-		_delay_ms(1000);
+		//PORTB ^= (1 << PB0);				//toggle the LED
 		
 	//}
 	
