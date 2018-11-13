@@ -34,15 +34,20 @@ void stopSpeaker(void);
 void failSpeaker(void);
 
 int main(void) {
-	
+
 	char rawDat[1500];
-	//char manchDat[350];
-	//char test = 'T';
+	char manchDat[350];
+	char curVal;
+	char lastVal;
+	int orig;
+	int check;
 	int i = 0;
-	//int curVal = 0;
-	//int here;
-	//int bitlen = 0;
-	//int state = 0;
+	int j = 0;
+	int start = 0;
+	int sameNum = 0;
+	int state = 0;
+	int Ostate = 0;
+
 	
 	
 	/* Set Port C pin PC5 as input to monitor the output of the comparator.*/
@@ -79,9 +84,9 @@ int main(void) {
 	
 	
 	
-	while(1) {						//Loop forever
+	//while(1) {						//Loop forever
 
-		/*
+		
 		for(i = 0; i < 1500; i++){		//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
 				rawDat[i] = '1';
@@ -90,22 +95,22 @@ int main(void) {
 			}
 			_delay_us(50);
 			
-		}*/
+		}
 		
 		
 		
 		/*
 		for(i=0;i<1000;i++){				//Used for testing
 			if(i%2==0){
-				rawDat[i] = '1';
+				rawDat[i] = 1;
 			} else {
-				rawDat[i] = '0';
+				rawDat[i] = 0;
 			}
 		}
 		*/
 		
 
-		/*
+		
 		for(i=0;i<1500;i++){				//Because the USART transmission can only happen so fast
 			if(rawDat[i] == '1'){			//This for loop must be used in order to print the values 
 				writeSER("1");
@@ -116,13 +121,42 @@ int main(void) {
 			}
 			_delay_ms(50);
 		}
-		*/
 		
-		//for(i=0;i<1500;i++){
+		i = 0;
+		j = 0;
+		lastVal = '2';
+		check = 0;
+		sameNum = 1;
+		
+		orig = (rawDat[0] == '1');
+		for(i=0;i<1500 && check == 0;i++){		//First need to find the first point that the state switches.
+			state = (rawDat[i] == '1');			//It does this to avoid the couple of bits that will likely be
+			if(orig != state && check == 0){	//in the beginning. Once the two 'start' is defined the rest
+				start = i;						//of the buffer can be processed.
+				check = 1;
+			}
+		}
+		
+		for(i=start;i<(1500-start);i++){
+			curVal = rawDat[i];
+			if(curVal == lastVal){
+				sameNum++;
+			} else {	//If the last and current val are different then process..
+				if(sameNum >= 3 && sameNum <=7){ //Check for how many times the bit repeated. this represents either a single or double bit.
+					manchDat[j] = lastVal;
+				} else if(sameNum >= 8 && sameNum <= 11){
+					manchDat[j] = lastVal;
+					j++
+					manchDat[j] = lastVal;
+				} else {
+					//last bit sequence was either too long or too short.
+				}
+				j++;
+			}
+			lastVal = curVal;
 			
-			
-			
-		//}
+		}
+		
 		
 		
 		PORTB ^= (1 << PB0);				//toggle the LED
@@ -135,7 +169,7 @@ int main(void) {
 		stopSpeaker();
 		_delay_ms(1000);
 		
-	}
+	//}
 	
 	return(0);
 }
