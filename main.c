@@ -40,7 +40,6 @@ int main(void) {
 	char curVal;
 	char lastVal;
 	int orig;
-	int check;
 	int i = 0;
 	int j = 0;
 	int start = 0;
@@ -84,10 +83,10 @@ int main(void) {
 	
 	
 	
-	//while(1) {						//Loop forever
+	//while(1) {	//Loop forever
 
 		
-		for(i = 0; i < 1500; i++){		//used to fill buffer with data from comparator
+		for(i = 0; i < 1500; i++){	//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
 				rawDat[i] = '1';
 			} else {
@@ -97,9 +96,11 @@ int main(void) {
 			
 		}
 		
+		writeSER("Collected Data\n\r");
+		
 		/*
-		for(i=0;i<1500;i++){				//Because the USART transmission can only happen so fast
-			if(rawDat[i] == '1'){			//This for loop must be used in order to print the values 
+		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
+			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
 				writeSER("1");
 			} else if(rawDat[i] == '0'){
 				writeSER("0");
@@ -111,26 +112,28 @@ int main(void) {
 		*/
 		
 		i = 0;
-		j = 0;
-		lastVal = '2';
-		check = 0;
-		sameNum = 0;
+
 		
 		orig = (rawDat[0] == '1');
-		for(i=0;i<1500 && check == 0;i++){		//First need to find the first point that the state switches.
-			state = (rawDat[i] == '1');			//It does this to avoid the couple of bits that will likely be
-			if(orig != state && check == 0){	//in the beginning. Once the two 'start' is defined the rest
-				start = i;						//of the buffer can be processed.
-				check = 1;
+		for(i=0;i<1500;i++){			//First need to find the first point that the state switches.
+			state = (rawDat[i] == '1');	//It does this to avoid the couple of bits that will likely be
+			if(orig != state){			//in the beginning. Once the two 'start' is defined the rest
+				start = i;				//of the buffer can be processed.
+				break;
 			}
 		}
+		
+		writeSER("Found starting point\n\r");
+		
+		j = 0;
+		sameNum = 0;		
 		
 		lastVal = rawDat[start];
 		for(i=start;i<(1500-start);i++){
 			curVal = rawDat[i];
 			if(curVal == lastVal){
 				sameNum++;
-			} else {	//If the last and current val are different then process..
+			} else {	//If the last and current val are different then process the last group
 				if(sameNum >= 3 && sameNum <=7){ //Check for how many times the bit repeated. this represents either a single or double bit.
 					manchDat[j] = lastVal;
 				} else if(sameNum >= 8 && sameNum <= 11){
@@ -143,9 +146,9 @@ int main(void) {
 					break;
 				}
 				j++;
+				sameNum = 1;
 			}
 			lastVal = curVal;
-	
 		}
 		
 		for(i=0;i<350;i++){				
