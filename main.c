@@ -37,16 +37,20 @@ int main(void) {
 
 	char rawDat[1500];
 	char manchDat[350];
+	char binDataC[149];
+	char tag[64];
+	int binDataI[149];
 	char curVal;
 	char lastVal;
+	char first;
+	char second;
 	int orig;
 	int i = 0;
 	int j = 0;
 	int start = 0;
 	int sameNum = 0;
 	int state = 0;
-	int Ostate = 0;
-
+	
 	
 	
 	/* Set Port C pin PC5 as input to monitor the output of the comparator.*/
@@ -84,7 +88,10 @@ int main(void) {
 	
 	
 	//while(1) {	//Loop forever
-
+		//while(1){
+		//	_delay_ms(1000);
+		//	writeSER("PLeaseWork");
+		//}
 		
 		for(i = 0; i < 1500; i++){	//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
@@ -95,9 +102,9 @@ int main(void) {
 			_delay_us(50);
 			
 		}
-		
-		writeSER("Collected Data\n\r");
-		
+
+		//writeSER("Collected Data\n\n\r");
+		//_delay_ms(1000);
 		/*
 		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
 			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
@@ -112,8 +119,6 @@ int main(void) {
 		*/
 		
 		i = 0;
-
-		
 		orig = (rawDat[0] == '1');
 		for(i=0;i<1500;i++){			//First need to find the first point that the state switches.
 			state = (rawDat[i] == '1');	//It does this to avoid the couple of bits that will likely be
@@ -123,7 +128,8 @@ int main(void) {
 			}
 		}
 		
-		writeSER("Found starting point\n\r");
+		//writeSER("Found starting point\n\n\r");
+		//_delay_ms(1000);
 		
 		j = 0;
 		sameNum = 0;		
@@ -151,6 +157,7 @@ int main(void) {
 			lastVal = curVal;
 		}
 		
+		/*
 		for(i=0;i<350;i++){				
 			if(manchDat[i] == '1'){			
 				writeSER("1");
@@ -161,6 +168,53 @@ int main(void) {
 			}
 			_delay_ms(50);
 		}
+		*/
+		
+		//Next piece of code needs to find the first double bit to use as a reference
+		//this is because the state cannot stay the same through an entire cycle. there must be a transition.
+		
+		first = manchDat[0];
+		for(i=1;i<149;i++){
+			second = manchDat[i];
+			if(first == second){
+				start = i;
+				break;
+			} else {
+				second = first;
+			}
+		}
+		
+		//The code below converts the manchester code into binary code
+		j = 0;
+		for(i=start;i<149;i+=2){
+			first = manchDat[i];
+			second = manchDat[i+1];
+			if(first == '1' && second == '0'){
+				binDataC[j] = '1';
+				binDataI[j] = 1;
+			} else if(first == '0' && second == '1'){
+				binDataC[j] = '0';
+				binDataI[j] = 0; 
+			} else {
+				binDataC[j] = '2';
+				binDataI[j] = 2;
+			}
+			j++;
+		}
+		
+		//writeSER("\nPrinting Binary data\n\n\r");
+		
+		//This prints the binary code
+		for(i=0;i<149;i++){				
+			if(binDataC[i] == '1'){			
+				writeSER("1");
+			} else if(binDataC[i] == '0'){
+				writeSER("0");
+			} else {
+				writeSER("2");
+			}
+			_delay_ms(200);
+		}		
 		
 		//PORTB ^= (1 << PB0);				//toggle the LED
 		
