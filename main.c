@@ -5,7 +5,7 @@
 #define F_CPU		10000000UL			//Define the CPU speed
 #define FOSC 		10000000
 #define BAUD 		9600
-#define MYUBRR		((FOSC/16/BAUD)-1)
+#define MYUBRR		((FOSC/16/BAUD)-1)	//Equation from Datasheet
 #define SEND_SIZE	100					//Size of serial transmission 
 
 #include <string.h>
@@ -23,6 +23,19 @@ char sendBUFFER[SEND_SIZE];
 uint8_t wrINDEX;
 uint8_t	rdINDEX;
 
+
+/* Atmel Static Variables */
+static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
+static volatile unsigned char UART_RxHead;
+static volatile unsigned char UART_RxTail;
+static unsigned char UART_TxBuf[UART_TX_BUFFER_SIZE];
+static volatile unsigned char UART_TxHead;
+static volatile unsigned char UART_TxTail;
+
+
+
+/* My Functions */
+void USART_Transmit( unsigned char data );
 void sendUSART(unsigned char data);
 void initUSART(void);
 void initComparator(void);
@@ -32,6 +45,10 @@ void writeSER(char c[]);
 void initSpeaker(void);
 void stopSpeaker(void);
 void failSpeaker(void);
+
+/* Atmel Functions */
+void TransmitByte(unsigned char data);
+void InitUART(unsigned char ubrr_val);
 
 int main(void) {
 
@@ -75,9 +92,6 @@ int main(void) {
 	/* Setup PWM */
 	initPWM();
 	
-	/* Setup Comparator */
-	//initComparator();
-	
 	/* Setup Speaker */
 	//initSpeaker();
 	
@@ -102,21 +116,8 @@ int main(void) {
 			_delay_us(50);
 			
 		}
-
-		//writeSER("Collected Data\n\n\r");
-		//_delay_ms(1000);
-		/*
-		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
-			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
-				writeSER("1");
-			} else if(rawDat[i] == '0'){
-				writeSER("0");
-			} else {
-				writeSER("2");
-			}
-			_delay_ms(50);
-		}
-		*/
+		
+		_delay_ms(2000);
 		
 		i = 0;
 		orig = (rawDat[0] == '1');
@@ -128,8 +129,22 @@ int main(void) {
 			}
 		}
 		
-		//writeSER("Found starting point\n\n\r");
+		//First print block goes here
+		//writeSER("Collected Data\n\n\r");
 		//_delay_ms(1000);
+		
+		
+		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
+			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
+				writeSER("1");
+			} else if(rawDat[i] == '0'){
+				writeSER("0");
+			} else {
+				writeSER("2");
+			}
+			_delay_ms(50);
+		}
+		
 		
 		j = 0;
 		sameNum = 0;		
@@ -157,7 +172,10 @@ int main(void) {
 			lastVal = curVal;
 		}
 		
-		/*
+		
+		//Second print block goes here
+		
+		writeSER("\n\n\n\r");
 		for(i=0;i<350;i++){				
 			if(manchDat[i] == '1'){			
 				writeSER("1");
@@ -168,8 +186,9 @@ int main(void) {
 			}
 			_delay_ms(50);
 		}
-		*/
 		
+		
+		_delay_ms(1000);
 		//Next piece of code needs to find the first double bit to use as a reference
 		//this is because the state cannot stay the same through an entire cycle. there must be a transition.
 		
@@ -189,23 +208,28 @@ int main(void) {
 		for(i=start;i<149;i+=2){
 			first = manchDat[i];
 			second = manchDat[i+1];
-			if(first == '1' && second == '0'){
+			if((first == '1') && (second == '0')){
 				binDataC[j] = '1';
-				binDataI[j] = 1;
-			} else if(first == '0' && second == '1'){
+				//binDataI[j] = 1;
+			} else if((first == '0') && (second == '1')){
 				binDataC[j] = '0';
-				binDataI[j] = 0; 
+				//binDataI[j] = 0; 
 			} else {
 				binDataC[j] = '2';
-				binDataI[j] = 2;
+				//binDataI[j] = 2;
 			}
 			j++;
 		}
 		
-		//writeSER("\nPrinting Binary data\n\n\r");
+		_delay_ms(1000);
+		//writeSER("\n\n\n\r");
+		//This block prints the binary code
+		/*
+		writeSER("Please");
+		writeSER("Work");
+		_delay_ms(1000);
 		
-		//This prints the binary code
-		for(i=0;i<149;i++){				
+		for(i=0;i<100;i++){				
 			if(binDataC[i] == '1'){			
 				writeSER("1");
 			} else if(binDataC[i] == '0'){
@@ -215,6 +239,8 @@ int main(void) {
 			}
 			_delay_ms(200);
 		}		
+		*/
+		
 		
 		//PORTB ^= (1 << PB0);				//toggle the LED
 		
@@ -260,10 +286,18 @@ void writeSER(char c[]){
 	
 }
 
+void USART_Transmit( unsigned char data ){	//Function from datasheet
+ /* Wait for empty transmit buffer */
+ while ( !( UCSR0A & (1<<UDRE0)) );
+ 
+ /* Put data into buffer, sends the data */
+ UDR0 = data;
+}
+
 void initUSART(void){
 	
-	UBRR0H = (MYUBRR>>8);
-	UBRR0L =  MYUBRR;
+	UBRR0H = (unsigned char)(MYUBRR>>8);
+	UBRR0L =  (unsigned char)MYUBRR;
 	
 	UCSR0B = (1<<TXEN0)|(1<<TXCIE0);
 	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
@@ -338,60 +372,37 @@ void failSpeaker(void){
 void stopSpeaker(void){
 	TCCR1B &= (0<<CS21)|(0<<CS11)|(0<<CS10);	//disables PWM
 }
+///////////////////////////////////////////////////////////////
+/* Atmel Functions Below */
 
-void initComparator(void) {
+ISR(USART_UDRE_vect){
+	unsigned char tmptail;
+
+	/* Check if all data is transmitted */
+	if (UART_TxHead != UART_TxTail) {
+		/* Calculate buffer index */
+		tmptail = ( UART_TxTail + 1 ) & UART_TX_BUFFER_MASK;
+		/* Store new index */
+		UART_TxTail = tmptail;      
+		/* Start transmission */
+		UDR = UART_TxBuf[tmptail];
+	} else {
+		/* Disable UDRE interrupt */
+		UCSRB &= ~(1<<UDRIE);        
+	}
+}
+
+void TransmitByte(unsigned char data){
+	unsigned char tmphead;
 	
-    // ACSR Info from Datasheet:
-    //
-    // When this bit is written logic one, the power to the Analog
-    // Comparator is switched off. This bit can be set at any time to turn
-    // off the Analog Comparator. This will reduce power consumption in
-    // Active and Idle mode. When changing the ACD bit, the Analog
-    // Comparator Interrupt must be disabled by clearing the ACIE bit in
-    // ACSR. Otherwise an interrupt can occur when the bit is changed.
-    ACSR &= (0 << ACD);
-    // When this bit is set, a fixed bandgap reference voltage replaces the
-    // positive input to the Analog Comparator. When this bit is cleared,
-    // AIN0 is applied to the positive input of the Analog Comparator. When
-    // the bandgap referance is used as input to the Analog Comparator, it
-    // will take a certain time for the voltage to stabilize. If not
-    // stabilized, the first conversion may give a wrong value.
-    ACSR &= (0 << ACBG);
-    // When the ACIE bit is written logic one and the I-bit in the Status
-    // Register is set, the Analog Comparator interrupt is activated.
-    // When written logic zero, the interrupt is disabled.
-    ACSR |= (1 << ACIE);
-    // When written logic one, this bit enables the input capture function
-    // in Timer/Counter1 to be triggered by the Analog Comparator. The
-    // comparator output is in this case directly connected to the input
-    // capture front-end logic, making the comparator utilize the noise
-    // canceler and edge select features of the Timer/Counter1 Input
-    // Capture interrupt. When written logic zero, no connection between
-    // the Analog Comparator and the input capture function exists. To
-    // make the comparator trigger the Timer/Counter1 Input Capture
-    // interrupt, the ICIE1 bit in the Timer Interrupt Mask Register
-    // (TIMSK1) must be set.
-    ACSR &= (0 << ACIC);
-    // These bits determine which comparator events that trigger the Analog
-    // Comparator interrupt.
-    // ACIS1 ACIS0 Mode
-    // 0 0 Toggle
-    // 0 1 Reserved
-    // 1 0 Falling edge
-    // 1 1 Rising edge
-    ACSR |= (1 << ACIS1);
-    ACSR |= (1 << ACIS0);
-	
-	//
-    // DIDR1 settings from the Datasheet: 
-    //
-    // When this bit is written logic one, the digital input buffer on the
-    // AIN1/0 pin is disabled. The corresponding PIN Register bit will
-    // always read as zero when this bit is set. When an analog signal is
-    // applied to the AIN1/0 pin and the digital input from this pin is not
-    // needed, this bit should be written logic one to reduce power
-    // consumption in the digital input buffer.
-    DIDR1 |= (1 << AIN1D);
-    DIDR1 |= (1 << AIN0D); 
-	
+	/* Calculate buffer index */
+	tmphead = (UART_TxHead + 1) & UART_TX_BUFFER_MASK;
+	/* Wait for free space in buffer */
+	while (tmphead == UART_TxTail);
+	/* Store data in buffer */
+	UART_TxBuf[tmphead] = data;
+	/* Store new index */
+	UART_TxHead = tmphead;
+	/* Enable UDRE interrupt */
+	UCSRB |= (1<<UDRIE);
 }
