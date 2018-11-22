@@ -16,6 +16,24 @@
 #include <util/delay.h>
 #include "lcd.h"
 
+/////////////////////////////////////////////////////////////////////////////
+// More Atmel Defines ///////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+/* UART Buffer Defines */
+#define UART_RX_BUFFER_SIZE 8     /* 2,4,8,16,32,64,128 or 256 bytes */
+#define UART_TX_BUFFER_SIZE 8
+#define UART_RX_BUFFER_MASK (UART_RX_BUFFER_SIZE - 1)
+
+#if (UART_RX_BUFFER_SIZE & UART_RX_BUFFER_MASK)
+	#error RX buffer size is not a power of 2
+#endif
+
+#define UART_TX_BUFFER_MASK (UART_TX_BUFFER_SIZE - 1)
+#if (UART_TX_BUFFER_SIZE & UART_TX_BUFFER_MASK)
+	#error TX buffer size is not a power of 2
+#endif
+
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -25,7 +43,6 @@ uint8_t	rdINDEX;
 
 
 /* Atmel Static Variables */
-static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
 static volatile unsigned char UART_RxHead;
 static volatile unsigned char UART_RxTail;
 static unsigned char UART_TxBuf[UART_TX_BUFFER_SIZE];
@@ -45,6 +62,7 @@ void writeSER(char c[]);
 void initSpeaker(void);
 void stopSpeaker(void);
 void failSpeaker(void);
+void printString(char* string);
 
 /* Atmel Functions */
 void TransmitByte(unsigned char data);
@@ -52,10 +70,10 @@ void InitUART(unsigned char ubrr_val);
 
 int main(void) {
 
-	char rawDat[1500];
-	char manchDat[350];
-	char binDataC[149];
-	char tag[64];
+	unsigned char rawDat[1500];
+	unsigned char manchDat[350];
+	unsigned char binDataC[149];
+	unsigned char tag[64];
 	int binDataI[149];
 	char curVal;
 	char lastVal;
@@ -87,7 +105,8 @@ int main(void) {
 	sei();
 
 	/* Setup USART for communication with raspberry pi */
-	initUSART();
+	//initUSART();
+	InitUART(MYUBRR);
 	
 	/* Setup PWM */
 	initPWM();
@@ -117,8 +136,6 @@ int main(void) {
 			
 		}
 		
-		_delay_ms(2000);
-		
 		i = 0;
 		orig = (rawDat[0] == '1');
 		for(i=0;i<1500;i++){			//First need to find the first point that the state switches.
@@ -133,17 +150,23 @@ int main(void) {
 		//writeSER("Collected Data\n\n\r");
 		//_delay_ms(1000);
 		
-		
+		/*
 		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
 			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
-				writeSER("1");
+				//writeSER("1");
+				TransmitByte(rawDat[i]);
 			} else if(rawDat[i] == '0'){
-				writeSER("0");
+				TransmitByte(rawDat[i]);
 			} else {
-				writeSER("2");
+				TransmitByte(rawDat[i]);
 			}
 			_delay_ms(50);
 		}
+		*/
+		
+		//for(i=0;i<1500;i++){			//Updated UART above code is outdated and will be moved later
+		//	TransmitByte(rawDat[i]);
+		//}
 		
 		
 		j = 0;
@@ -175,20 +198,12 @@ int main(void) {
 		
 		//Second print block goes here
 		
-		writeSER("\n\n\n\r");
-		for(i=0;i<350;i++){				
-			if(manchDat[i] == '1'){			
-				writeSER("1");
-			} else if(manchDat[i] == '0'){
-				writeSER("0");
-			} else {
-				writeSER("2");
-			}
-			_delay_ms(50);
-		}
+		//printString("\n\n\n\r");
+		//for(i=0;i<350;i++){				
+		//	TransmitByte(manchDat[i]);
+		//	_delay_ms(10);
+		//}
 		
-		
-		_delay_ms(1000);
 		//Next piece of code needs to find the first double bit to use as a reference
 		//this is because the state cannot stay the same through an entire cycle. there must be a transition.
 		
@@ -221,25 +236,13 @@ int main(void) {
 			j++;
 		}
 		
-		_delay_ms(1000);
-		//writeSER("\n\n\n\r");
 		//This block prints the binary code
-		/*
-		writeSER("Please");
-		writeSER("Work");
-		_delay_ms(1000);
+		//printString("\n\n\n");
+		//for(i=0;i<149;i++){				
+		//	TransmitByte(binDataC[i]);
+		//	_delay_ms(10);
+		//}		
 		
-		for(i=0;i<100;i++){				
-			if(binDataC[i] == '1'){			
-				writeSER("1");
-			} else if(binDataC[i] == '0'){
-				writeSER("0");
-			} else {
-				writeSER("2");
-			}
-			_delay_ms(200);
-		}		
-		*/
 		
 		
 		//PORTB ^= (1 << PB0);				//toggle the LED
@@ -248,7 +251,7 @@ int main(void) {
 	
 	return(0);
 }
-
+/*
 ISR(USART_TX_vect){
 	
 	if(rdINDEX != wrINDEX){
@@ -259,6 +262,15 @@ ISR(USART_TX_vect){
 			rdINDEX = 0;
 		}
 	}
+}
+*/
+void printString(char* string){
+	
+	while(*string != 0x00){			//Becasue the string has a null terminating character just look for that
+		TransmitByte(*string);
+		string++;					//and increment through the pointer here. 
+	}
+	
 }
 
 void changeSER(char c){
@@ -286,14 +298,17 @@ void writeSER(char c[]){
 	
 }
 
+/*
 void USART_Transmit( unsigned char data ){	//Function from datasheet
- /* Wait for empty transmit buffer */
+ // Wait for empty transmit buffer 
  while ( !( UCSR0A & (1<<UDRE0)) );
  
- /* Put data into buffer, sends the data */
+ // Put data into buffer, sends the data 
  UDR0 = data;
 }
+*/
 
+/*
 void initUSART(void){
 	
 	UBRR0H = (unsigned char)(MYUBRR>>8);
@@ -303,6 +318,7 @@ void initUSART(void){
 	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
 	
 }
+*/
 
 void initPWM(void){
 	
@@ -370,7 +386,9 @@ void failSpeaker(void){
 }
 
 void stopSpeaker(void){
+	
 	TCCR1B &= (0<<CS21)|(0<<CS11)|(0<<CS10);	//disables PWM
+	
 }
 ///////////////////////////////////////////////////////////////
 /* Atmel Functions Below */
@@ -385,12 +403,35 @@ ISR(USART_UDRE_vect){
 		/* Store new index */
 		UART_TxTail = tmptail;      
 		/* Start transmission */
-		UDR = UART_TxBuf[tmptail];
+		UDR0 = UART_TxBuf[tmptail];
 	} else {
 		/* Disable UDRE interrupt */
-		UCSRB &= ~(1<<UDRIE);        
+		UCSR0B &= ~(1<<UDRIE0);        
 	}
 }
+
+
+
+void InitUART(unsigned char ubrr_val)
+{
+	unsigned char x;
+
+	/* Set the baud rate */
+	UBRR0H = (unsigned char)(ubrr_val>>8);
+	UBRR0L = (unsigned char)ubrr_val;
+	/* Enable UART receiver and transmitter */
+	UCSR0B = ((1<<RXEN0) | (1<<TXEN0) | (1<<RXCIE0));
+
+	/* Flush receive buffer */
+	x = 0; 			    
+
+	UART_RxTail = x;
+	UART_RxHead = x;
+	UART_TxTail = x;
+	UART_TxHead = x;
+}
+
+
 
 void TransmitByte(unsigned char data){
 	unsigned char tmphead;
@@ -404,5 +445,5 @@ void TransmitByte(unsigned char data){
 	/* Store new index */
 	UART_TxHead = tmphead;
 	/* Enable UDRE interrupt */
-	UCSRB |= (1<<UDRIE);
+	UCSR0B |= (1<<UDRIE0);
 }
