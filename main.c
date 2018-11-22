@@ -195,7 +195,6 @@ int main(void) {
 			lastVal = curVal;
 		}
 		
-		
 		//Second print block goes here
 		
 		//printString("\n\n\n\r");
@@ -207,20 +206,19 @@ int main(void) {
 		//Next piece of code needs to find the first double bit to use as a reference
 		//this is because the state cannot stay the same through an entire cycle. there must be a transition.
 		
-		first = manchDat[0];
-		for(i=1;i<149;i++){
-			second = manchDat[i];
-			if(first == second){
-				start = i;
+		for(i=0;i<350;i++){
+			
+			if(manchDat[i] == manchDat[i+1]){
+				start = i+1;
 				break;
 			} else {
-				second = first;
+				;
 			}
 		}
 		
 		//The code below converts the manchester code into binary code
 		j = 0;
-		for(i=start;i<149;i+=2){
+		/*for(i=start;i<149;i+=2){
 			first = manchDat[i];
 			second = manchDat[i+1];
 			if((first == '1') && (second == '0')){
@@ -234,14 +232,29 @@ int main(void) {
 				//binDataI[j] = 2;
 			}
 			j++;
+		} */
+		
+		for(i=start;i<350;i+=2){
+			
+			if(manchDat[i] == '0' && manchDat[i+1] != '0'){
+				binDataC[j] = '0';
+				j++;
+			} else if(manchDat[i] != '0' && manchDat[i+1] == '0'){
+				binDataC[j] = '1';
+				j++;
+			} else {
+				break;
+			}
+			
 		}
+		
 		
 		//This block prints the binary code
 		//printString("\n\n\n");
-		//for(i=0;i<149;i++){				
-		//	TransmitByte(binDataC[i]);
-		//	_delay_ms(10);
-		//}		
+		for(i=0;i<149;i++){				
+			TransmitByte(binDataC[i]);
+			_delay_ms(10);
+		}		
 		
 		
 		
