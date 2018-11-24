@@ -70,21 +70,26 @@ void InitUART(unsigned char ubrr_val);
 
 int main(void) {
 
-	unsigned char rawDat[1500];
-	unsigned char manchDat[350];
-	unsigned char binDataC[149];
-	unsigned char tag[64];
-	int binDataI[149];
+	char rawDat[1500];
+	char manchDat[350];
+	char binDataC[149];
+	char binDataI[55];
+	char finalDat[33];
+	char printTag[10];
 	char curVal;
 	char lastVal;
-	char first;
-	char second;
-	int orig;
+	long long binTag;
+	int remainder = 0;
+	int FinalTag = 0;
+	int orig = 0;
 	int i = 0;
 	int j = 0;
 	int start = 0;
 	int sameNum = 0;
 	int state = 0;
+	int parityCheck = 0;
+	int parity = 0;
+	int error = 0;
 	
 	
 	
@@ -116,7 +121,7 @@ int main(void) {
 	
 	/* LCD initialization */
 	lcd_init(LCD_DISP_ON);
-	lcd_puts("RFID Tag Here");
+	lcd_puts("RFID Tag");
 	
 	
 	
@@ -248,20 +253,128 @@ int main(void) {
 			
 		}
 		
-		
 		//This block prints the binary code
-		//printString("\n\n\n");
-		for(i=0;i<149;i++){				
-			TransmitByte(binDataC[i]);
-			_delay_ms(10);
-		}		
+		//printString("1");
+		//for(i=0;i<149;i++){				
+		//	TransmitByte(binDataC[i]);
+		//	_delay_ms(10);
+		//}		
 		
+		//Next piece of code will find the 9 bit start sequence 
+		//and will store the following 55 bits into the "TAG" buffer.
+		sameNum = 0; //reset sameNum variable
+		start = 0;
+		for(i=0;i<147;i++){
+			if(sameNum == 8){
+				start = i+1;
+				break;
+			} else if ((binDataC[i] == '1') && (binDataC[i+1] == '1')){
+				sameNum++;
+			} else {
+				sameNum = 0;
+			}
+		}
 		
+		/* Used this code to confirm the value of start
+		for(i=0;i<100;i++){
+			if(i != start){
+				PORTB |= (1 << PB0);
+				_delay_ms(500);
+				PORTB &= (0 << PB0);
+				_delay_ms(500);
+			} else {
+				break;
+			}
+		}
+		*/
 		
-		//PORTB ^= (1 << PB0);				//toggle the LED
+		//Now the code will store the 55 bit Tag into the tag buffer
+		j=0;
+		for(i=start;i<(start+55);i++){
+			if(binDataC[i] == '1'){
+				binDataC[j] = '1';
+				binDataI[j] = 1;
+				j++;
+			} else {
+				binDataC[j] = '0';
+				binDataI[j] = 0;
+				j++;
+			}
+		}
 		
+
+		//PORTB |= (1 << PB0);
+		
+		//for(i=0;i<55;i++){				
+		//	TransmitByte(binDataC[i]);
+		//	_delay_ms(10);
+		//}		
+		
+		//The next block processes the tag data and checks for a valid tag using the parity bits
+		for(i=9;i<59;i+=5){
+			parityCheck = binDataI[i] + binDataI[i+1] + binDataI[i+2] + binDataI[i+3];
+			parity = binDataI[i+4];
+			if((parityCheck%2 == 0) && (parity == 1)){
+				error = 1;
+				break;
+			} else if ((parityCheck%2 != 0) && (parity == 0)){
+				error = 1;
+				break;
+			}
+		}
+		//If made it to this point there is a valid tag.
+		
+		if(error != 1){					//Will tidy this up with a loop later.
+			finalDat[0] = binDataC[19];
+			finalDat[1] = binDataC[20];
+			finalDat[2] = binDataC[21];
+			finalDat[3] = binDataC[22];
+			finalDat[4] = binDataC[24];
+			finalDat[5] = binDataC[25];
+			finalDat[6] = binDataC[26];
+			finalDat[7] = binDataC[27];
+			finalDat[8] = binDataC[29];
+			finalDat[9] = binDataC[30];
+			finalDat[10] = binDataC[31];
+			finalDat[11] = binDataC[32];
+			finalDat[12] = binDataC[34];
+			finalDat[13] = binDataC[35];
+			finalDat[14] = binDataC[36];
+			finalDat[15] = binDataC[37];
+			finalDat[16] = binDataC[39];
+			finalDat[17] = binDataC[40];
+			finalDat[18] = binDataC[41];
+			finalDat[19] = binDataC[42];
+			finalDat[20] = binDataC[44];
+			finalDat[21] = binDataC[45];
+			finalDat[22] = binDataC[46];
+			finalDat[23] = binDataC[47];
+			finalDat[24] = binDataC[49];
+			finalDat[25] = binDataC[50];
+			finalDat[26] = binDataC[51];
+			finalDat[27] = binDataC[52];
+			finalDat[28] = binDataC[54];
+			finalDat[29] = binDataC[55];
+			finalDat[30] = binDataC[56];
+			finalDat[31] = binDataC[57];
+			finalDat[32] = '\0';
+			//Now just the 8H section of the tag is stored in finalDat[0-31]
+			//This data can now be converted from binary to decimal and displayed. 
+			sscanf(finalDat, "%d", %binTag);
+			
+			//Code below converts binary integer to decimal.
+			i=0;
+			while(binTag != 0){
+				remainder = binTag%10;
+				binTag /= 10;
+				FinalTag += remainder*pow(2,i);
+				i++;
+			}
+		}
+		
+		PORTB |= (1 << PB0);
 	//}
-	
+
 	return(0);
 }
 /*
