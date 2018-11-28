@@ -63,6 +63,9 @@ void initSpeaker(void);
 void stopSpeaker(void);
 void failSpeaker(void);
 void printString(char* string);
+void redLED(void);
+void greenLED(void);
+void ledOFF(void);
 
 /* Atmel Functions */
 void TransmitByte(unsigned char data);
@@ -98,6 +101,7 @@ int main(void) {
 	
 	/* Set Port B pin PB0 to output for Blue LED */
 	DDRB |=  (1 << PB0);				
+	DDRB |=  (1 << PB1);
 	
 	/* Set Port D pin PD3 to output for carrier signal -- OC2B */
 	DDRD |=  (1 << PD3);				
@@ -120,16 +124,22 @@ int main(void) {
 	//initSpeaker();
 	
 	/* LCD initialization */
-	lcd_init(LCD_DISP_ON);
+	lcd_init(LCD_DISP_ON_CURSOR_BLINK);
 	lcd_puts("RFID Tag");
 	
+
+	// while(1){
+		// PORTB ^= (1 << PB0);
+		// _delay_ms(1000);
+	// } 
 	
-	
-	//while(1) {	//Loop forever
-		//while(1){
-		//	_delay_ms(1000);
-		//	writeSER("PLeaseWork");
-		//}
+	// while(1) {	//Loop forever
+		// while(1){
+			// _delay_ms(1000);
+			// writeSER("PLeaseWork");
+		// }
+		
+
 		
 		for(i = 0; i < 1500; i++){	//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
@@ -151,14 +161,13 @@ int main(void) {
 			}
 		}
 		
-		//First print block goes here
-		//writeSER("Collected Data\n\n\r");
-		//_delay_ms(1000);
+		// First print block goes here
+		// _delay_ms(1000);
 		
 		/*
 		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
 			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
-				//writeSER("1");
+				// writeSER("1");
 				TransmitByte(rawDat[i]);
 			} else if(rawDat[i] == '0'){
 				TransmitByte(rawDat[i]);
@@ -169,9 +178,9 @@ int main(void) {
 		}
 		*/
 		
-		//for(i=0;i<1500;i++){			//Updated UART above code is outdated and will be moved later
-		//	TransmitByte(rawDat[i]);
-		//}
+		// for(i=0;i<1500;i++){			//Updated UART; above code is outdated and will be moved later
+			// TransmitByte(rawDat[i]);
+		// }
 		
 		
 		j = 0;
@@ -190,8 +199,8 @@ int main(void) {
 					j++;
 					manchDat[j] = lastVal;
 				} else {
-					//last bit sequence was either too long or too short.
-					//this means probably bad data... recollect.
+					// last bit sequence was either too long or too short.
+					// this means probably bad data... recollect.
 					break;
 				}
 				j++;
@@ -200,16 +209,16 @@ int main(void) {
 			lastVal = curVal;
 		}
 		
-		//Second print block goes here
+		// Second print block goes here
 		
-		//printString("\n\n\n\r");
-		//for(i=0;i<350;i++){				
-		//	TransmitByte(manchDat[i]);
-		//	_delay_ms(10);
-		//}
+		// printString("\n\n\n\r");
+		// for(i=0;i<350;i++){				
+			// TransmitByte(manchDat[i]);
+			// _delay_ms(10);
+		// }
 		
-		//Next piece of code needs to find the first double bit to use as a reference
-		//this is because the state cannot stay the same through an entire cycle. there must be a transition.
+		// Next piece of code needs to find the first double bit to use as a reference
+		// this is because the state cannot stay the same through an entire cycle. there must be a transition.
 		
 		for(i=0;i<350;i++){
 			
@@ -221,24 +230,8 @@ int main(void) {
 			}
 		}
 		
-		//The code below converts the manchester code into binary code
+		// The code below converts the manchester code into binary code
 		j = 0;
-		/*for(i=start;i<149;i+=2){
-			first = manchDat[i];
-			second = manchDat[i+1];
-			if((first == '1') && (second == '0')){
-				binDataC[j] = '1';
-				//binDataI[j] = 1;
-			} else if((first == '0') && (second == '1')){
-				binDataC[j] = '0';
-				//binDataI[j] = 0; 
-			} else {
-				binDataC[j] = '2';
-				//binDataI[j] = 2;
-			}
-			j++;
-		} */
-		
 		for(i=start;i<350;i+=2){
 			
 			if(manchDat[i] == '0' && manchDat[i+1] != '0'){
@@ -253,15 +246,15 @@ int main(void) {
 			
 		}
 		
-		//This block prints the binary code
-		//printString("1");
-		//for(i=0;i<149;i++){				
-		//	TransmitByte(binDataC[i]);
-		//	_delay_ms(10);
-		//}		
+		// This block prints the binary code
+		// printString("1");
+		// for(i=0;i<149;i++){				
+			// TransmitByte(binDataC[i]);
+			// _delay_ms(10);
+		// }		
 		
-		//Next piece of code will find the 9 bit start sequence 
-		//and will store the following 55 bits into the "TAG" buffer.
+		// Next piece of code will find the 9 bit start sequence 
+		// and will store the following 55 bits into the "TAG" buffer.
 		sameNum = 0; //reset sameNum variable
 		start = 0;
 		for(i=0;i<147;i++){
@@ -275,7 +268,7 @@ int main(void) {
 			}
 		}
 		
-		/* Used this code to confirm the value of start
+		/* //Used this code to confirm the value of start
 		for(i=0;i<100;i++){
 			if(i != start){
 				PORTB |= (1 << PB0);
@@ -288,7 +281,7 @@ int main(void) {
 		}
 		*/
 		
-		//Now the code will store the 55 bit Tag into the tag buffer
+		// Now the code will store the 55 bit Tag into the tag buffer
 		j=0;
 		for(i=start;i<(start+55);i++){
 			if(binDataC[i] == '1'){
@@ -302,67 +295,83 @@ int main(void) {
 			}
 		}
 		
-
-		//PORTB |= (1 << PB0);
+		//This block prints the 55bit Tag
+		// for(i=0;i<55;i++){				
+			// TransmitByte(binDataC[i]);
+			// _delay_ms(10);
+		// }		
 		
-		//for(i=0;i<55;i++){				
-		//	TransmitByte(binDataC[i]);
-		//	_delay_ms(10);
-		//}		
+		// The next block processes the tag data and checks for a valid tag using the parity bits
 		
-		//The next block processes the tag data and checks for a valid tag using the parity bits
-		for(i=9;i<59;i+=5){
+		
+		/*
+		for(i=0;i<50;i+=5){
 			parityCheck = binDataI[i] + binDataI[i+1] + binDataI[i+2] + binDataI[i+3];
 			parity = binDataI[i+4];
 			if((parityCheck%2 == 0) && (parity == 1)){
 				error = 1;
+				PORTB |= (1 << PB0);
 				break;
 			} else if ((parityCheck%2 != 0) && (parity == 0)){
 				error = 1;
+				PORTB |= (1 << PB0);
 				break;
 			}
 		}
-		//If made it to this point there is a valid tag.
+		*/
 		
-		if(error != 1){					//Will tidy this up with a loop later.
-			finalDat[0] = binDataC[19];
-			finalDat[1] = binDataC[20];
-			finalDat[2] = binDataC[21];
-			finalDat[3] = binDataC[22];
-			finalDat[4] = binDataC[24];
-			finalDat[5] = binDataC[25];
-			finalDat[6] = binDataC[26];
-			finalDat[7] = binDataC[27];
-			finalDat[8] = binDataC[29];
-			finalDat[9] = binDataC[30];
-			finalDat[10] = binDataC[31];
-			finalDat[11] = binDataC[32];
-			finalDat[12] = binDataC[34];
-			finalDat[13] = binDataC[35];
-			finalDat[14] = binDataC[36];
-			finalDat[15] = binDataC[37];
-			finalDat[16] = binDataC[39];
-			finalDat[17] = binDataC[40];
-			finalDat[18] = binDataC[41];
-			finalDat[19] = binDataC[42];
-			finalDat[20] = binDataC[44];
-			finalDat[21] = binDataC[45];
-			finalDat[22] = binDataC[46];
-			finalDat[23] = binDataC[47];
-			finalDat[24] = binDataC[49];
-			finalDat[25] = binDataC[50];
-			finalDat[26] = binDataC[51];
-			finalDat[27] = binDataC[52];
-			finalDat[28] = binDataC[54];
-			finalDat[29] = binDataC[55];
-			finalDat[30] = binDataC[56];
-			finalDat[31] = binDataC[57];
-			finalDat[32] = '\0';
-			//Now just the 8H section of the tag is stored in finalDat[0-31]
-			//This data can now be converted from binary to decimal and displayed. 
-			sscanf(finalDat, "%d", %binTag);
+		
+		
+		// If made it to this point there is a valid tag.
+		
+		//if(error == 0){					//Will tidy this up with a loop later.
+			binDataC[0] = binDataC[10];
+			binDataC[1] = binDataC[11];
+			binDataC[2] = binDataC[12];
+			binDataC[3] = binDataC[13];
+			binDataC[4] = binDataC[15];
+			binDataC[5] = binDataC[16];
+			binDataC[6] = binDataC[17];
+			binDataC[7] = binDataC[18];
+			binDataC[8] = binDataC[20];
+			binDataC[9] = binDataC[21];
+			binDataC[10] = binDataC[22];
+			binDataC[11] = binDataC[23];
+			binDataC[12] = binDataC[25];
+			binDataC[13] = binDataC[26];
+			binDataC[14] = binDataC[27];
+			binDataC[15] = binDataC[28];
+			binDataC[16] = binDataC[30];
+			binDataC[17] = binDataC[31];
+			binDataC[18] = binDataC[32];
+			binDataC[19] = binDataC[33];
+			binDataC[20] = binDataC[35];
+			binDataC[21] = binDataC[36];
+			binDataC[22] = binDataC[37];
+			binDataC[23] = binDataC[38];
+			binDataC[24] = binDataC[40];
+			binDataC[25] = binDataC[41];
+			binDataC[26] = binDataC[42];
+			binDataC[27] = binDataC[43];
+			binDataC[28] = binDataC[45];
+			binDataC[29] = binDataC[46];
+			binDataC[30] = binDataC[47];
+			binDataC[31] = binDataC[48];
+			binDataC[32] = '\0';
 			
-			//Code below converts binary integer to decimal.
+			// Now just the 8H section of the tag is stored in binDataC[0-31]
+			// This data can now be converted from binary to decimal and displayed. 
+			//sscanf(binDataC, "%lld", &binTag);
+
+			//Prints Final Binary Tag
+			for(i=0;i<32;i++){				
+				TransmitByte(binDataC[i]);
+				_delay_ms(10);
+			}
+			
+			
+			/*
+			// Code below converts binary integer to decimal.
 			i=0;
 			while(binTag != 0){
 				remainder = binTag%10;
@@ -370,13 +379,36 @@ int main(void) {
 				FinalTag += remainder*pow(2,i);
 				i++;
 			}
-		}
+			
+			itoa(FinalTag, printTag, 10);
+			lcd_command(LCD_CLR);
+			lcd_command(LCD_HOME);
+			lcd_puts(printTag);
+			*/
+			
+		//} else {
+		//	PORTB |= (1 << PB0);
+		//}
 		
-		PORTB |= (1 << PB0);
-	//}
+		//PORTB |= (1 << PB0);
+		
+	// }
 
 	return(0);
 }
+void ledOFF(void){
+	PORTB &= (0 << PB0);
+	
+}
+
+void redLED(void){
+	PORTB |= (1 << PB0);
+}
+
+void greenLED(void){
+	PORTB |= (1 << PB1);	
+}
+
 /*
 ISR(USART_TX_vect){
 	
@@ -465,6 +497,8 @@ void initPWM(void){
 	OCR2A = 79;				//output compare, 50% duty cycle. 
 	OCR2B = 39;	
 	
+	//PORTB |= (1 << PB0);
+	//PORTB |= (1 << PB1);	
 }
 
 void initSpeaker(void) {
