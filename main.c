@@ -76,7 +76,6 @@ int main(void) {
 	char rawDat[1500];
 	char manchDat[350];
 	char binDataC[149];
-	char binDataI[55];
 	char finalDat[33];
 	char printTag[10];
 	char curVal;
@@ -91,7 +90,7 @@ int main(void) {
 	int sameNum = 0;
 	int state = 0;
 	int parityCheck = 0;
-	int parity = 0;
+	int parityBit = 0;
 	int error = 0;
 	
 	
@@ -286,11 +285,9 @@ int main(void) {
 		for(i=start;i<(start+55);i++){
 			if(binDataC[i] == '1'){
 				binDataC[j] = '1';
-				binDataI[j] = 1;
 				j++;
 			} else {
 				binDataC[j] = '0';
-				binDataI[j] = 0;
 				j++;
 			}
 		}
@@ -307,7 +304,7 @@ int main(void) {
 		/*
 		for(i=0;i<50;i+=5){
 			parityCheck = binDataI[i] + binDataI[i+1] + binDataI[i+2] + binDataI[i+3];
-			parity = binDataI[i+4];
+			parityBit = binDataI[i+4];
 			if((parityCheck%2 == 0) && (parity == 1)){
 				error = 1;
 				PORTB |= (1 << PB0);
@@ -317,14 +314,64 @@ int main(void) {
 				PORTB |= (1 << PB0);
 				break;
 			}
+			parityCheck = 0;
+			parityBit = 0;
 		}
 		*/
-		
+		j=0;
+		error = 0;
+		for(i=0;i<50;i+=5){
+			parityCheck = 0;
+			parityBit = 0;
+			if(binDataC[i] == '1'){
+				parityCheck++;
+				// PORTB |= (1 << PB0);
+				// _delay_ms(1000);
+				// PORTB &= (0 << PB0);
+				// _delay_ms(1000);				
+			}
+			if(binDataC[i+1] == '1') {
+				parityCheck++;
+				// PORTB |= (1 << PB0);
+				// _delay_ms(1000);
+				// PORTB &= (0 << PB0);
+				// _delay_ms(1000);				
+			}  
+			if(binDataC[i+2] == '1') {
+				parityCheck++;
+				// PORTB |= (1 << PB0);
+				// _delay_ms(1000);
+				// PORTB &= (0 << PB0);
+				// _delay_ms(1000);				
+			}  
+			if(binDataC[i+3] == '1') {
+				parityCheck++;
+				// PORTB |= (1 << PB0);
+				// _delay_ms(1000);
+				// PORTB &= (0 << PB0);
+				// _delay_ms(1000);				
+			} 
+			
+			if(binDataC[i+4] == '1'){
+				parityBit = 1;
+			} else {
+				parityBit = 0;
+			}
+			
+			j++;
+			if(parityCheck%2 == 0 && parityBit == 1){
+				error = 1;
+				break;
+			} else if((parityCheck == 1 || parityCheck == 3) && parityBit == 0){
+				error = 1;
+				break;
+			}
+		}
 		
 		
 		// If made it to this point there is a valid tag.
 		
-		//if(error == 0){					//Will tidy this up with a loop later.
+		if(error == 0){					//Will tidy this up with a loop later.
 			binDataC[0] = binDataC[10];
 			binDataC[1] = binDataC[11];
 			binDataC[2] = binDataC[12];
@@ -386,11 +433,11 @@ int main(void) {
 			lcd_puts(printTag);
 			*/
 			
-		//} else {
-		//	PORTB |= (1 << PB0);
-		//}
-		
-		//PORTB |= (1 << PB0);
+		} else {
+			failSpeaker();
+			_delay_ms(500);
+			stopSpeaker();
+		}
 		
 	// }
 
