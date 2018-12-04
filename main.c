@@ -11,6 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -76,13 +78,10 @@ int main(void) {
 	char rawDat[1500];
 	char manchDat[350];
 	char binDataC[149];
-	char finalDat[33];
 	char printTag[10];
+	char test [11] = "Hello LOL ";
 	char curVal;
 	char lastVal;
-	long long binTag;
-	int remainder = 0;
-	int FinalTag = 0;
 	int orig = 0;
 	int i = 0;
 	int j = 0;
@@ -92,7 +91,9 @@ int main(void) {
 	int parityCheck = 0;
 	int parityBit = 0;
 	int error = 0;
-	
+	long long temp1 = 0;
+	long long temp2 = 0;
+	long long finalTag = 0;
 	
 	
 	/* Set Port C pin PC5 as input to monitor the output of the comparator.*/
@@ -123,7 +124,7 @@ int main(void) {
 	//initSpeaker();
 	
 	/* LCD initialization */
-	lcd_init(LCD_DISP_ON_CURSOR_BLINK);
+	lcd_init(LCD_DISP_ON);
 	lcd_puts("RFID Tag");
 	
 
@@ -132,7 +133,7 @@ int main(void) {
 		// _delay_ms(1000);
 	// } 
 	
-	// while(1) {	//Loop forever
+	while(1) {	//Loop forever
 		// while(1){
 			// _delay_ms(1000);
 			// writeSER("PLeaseWork");
@@ -299,25 +300,6 @@ int main(void) {
 		// }		
 		
 		// The next block processes the tag data and checks for a valid tag using the parity bits
-		
-		
-		/*
-		for(i=0;i<50;i+=5){
-			parityCheck = binDataI[i] + binDataI[i+1] + binDataI[i+2] + binDataI[i+3];
-			parityBit = binDataI[i+4];
-			if((parityCheck%2 == 0) && (parity == 1)){
-				error = 1;
-				PORTB |= (1 << PB0);
-				break;
-			} else if ((parityCheck%2 != 0) && (parity == 0)){
-				error = 1;
-				PORTB |= (1 << PB0);
-				break;
-			}
-			parityCheck = 0;
-			parityBit = 0;
-		}
-		*/
 		j=0;
 		error = 0;
 		for(i=0;i<50;i+=5){
@@ -325,31 +307,15 @@ int main(void) {
 			parityBit = 0;
 			if(binDataC[i] == '1'){
 				parityCheck++;
-				// PORTB |= (1 << PB0);
-				// _delay_ms(1000);
-				// PORTB &= (0 << PB0);
-				// _delay_ms(1000);				
 			}
 			if(binDataC[i+1] == '1') {
 				parityCheck++;
-				// PORTB |= (1 << PB0);
-				// _delay_ms(1000);
-				// PORTB &= (0 << PB0);
-				// _delay_ms(1000);				
 			}  
 			if(binDataC[i+2] == '1') {
 				parityCheck++;
-				// PORTB |= (1 << PB0);
-				// _delay_ms(1000);
-				// PORTB &= (0 << PB0);
-				// _delay_ms(1000);				
 			}  
 			if(binDataC[i+3] == '1') {
 				parityCheck++;
-				// PORTB |= (1 << PB0);
-				// _delay_ms(1000);
-				// PORTB &= (0 << PB0);
-				// _delay_ms(1000);				
 			} 
 			
 			if(binDataC[i+4] == '1'){
@@ -367,9 +333,6 @@ int main(void) {
 				break;
 			}
 		}
-		
-		
-		// If made it to this point there is a valid tag.
 		
 		if(error == 0){					//Will tidy this up with a loop later.
 			binDataC[0] = binDataC[10];
@@ -406,40 +369,68 @@ int main(void) {
 			binDataC[31] = binDataC[48];
 			binDataC[32] = '\0';
 			
+			// If made it to this point there is a valid tag.
+			
 			// Now just the 8H section of the tag is stored in binDataC[0-31]
 			// This data can now be converted from binary to decimal and displayed. 
 			//sscanf(binDataC, "%lld", &binTag);
 
 			//Prints Final Binary Tag
+			// for(i=0;i<32;i++){				
+				// TransmitByte(binDataC[i]);
+				// _delay_ms(10);
+			// }
+			
+			i=0;
+			while(binDataC[i] != '\0')
+			{
+				if(binDataC[i] == '1'){
+					finalTag |= 1;
+				}
+
+				i++;
+				if(binDataC[i] != '\0'){
+					finalTag <<= 1;
+				}
+			}			
+			
+			//finalTag = 8640206;
+			
+			ltoa(finalTag, printTag, 10);
+			//snprintf(printTag, "%lld", finalTag);
+			//sprintf(printTag, "%lli", finalTag);
+			
+			// printTag[10] = '\0';
 			for(i=0;i<32;i++){				
 				TransmitByte(binDataC[i]);
 				_delay_ms(10);
-			}
-			
-			
-			/*
-			// Code below converts binary integer to decimal.
-			i=0;
-			while(binTag != 0){
-				remainder = binTag%10;
-				binTag /= 10;
-				FinalTag += remainder*pow(2,i);
-				i++;
-			}
-			
-			itoa(FinalTag, printTag, 10);
-			lcd_command(LCD_CLR);
+			}			
+			//printTag[14] = '\0';
 			lcd_command(LCD_HOME);
 			lcd_puts(printTag);
-			*/
+			// _delay_ms(3000);
 			
 		} else {
 			failSpeaker();
-			_delay_ms(500);
+			_delay_ms(250);
 			stopSpeaker();
 		}
 		
-	// }
+		
+		orig = 0;
+		i = 0;
+		j = 0;
+		start = 0;
+		sameNum = 0;
+		state = 0;
+		parityCheck = 0;
+		parityBit = 0;
+		error = 0;
+		temp1 = 0;
+		temp2 = 0;
+		finalTag = 0;		
+		
+	}
 
 	return(0);
 }
