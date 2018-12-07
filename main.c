@@ -128,16 +128,21 @@ int main(void) {
 	lcd_puts("RFID Tag");
 	
 
-	// while(1){
-		// PORTB ^= (1 << PB0);
-		// _delay_ms(1000);
-	// } 
 	
 	while(1) {	//Loop forever
-		// while(1){
-			// _delay_ms(1000);
-			// writeSER("PLeaseWork");
-		// }
+		orig = 0;
+		i = 0;
+		j = 0;
+		start = 0;
+		sameNum = 0;
+		state = 0;
+		parityCheck = 0;
+		parityBit = 0;
+		error = 0;
+		temp1 = 0;
+		temp2 = 0;
+		finalTag = 0;		
+		
 		
 
 		
@@ -416,19 +421,6 @@ int main(void) {
 			stopSpeaker();
 		}
 		
-		
-		orig = 0;
-		i = 0;
-		j = 0;
-		start = 0;
-		sameNum = 0;
-		state = 0;
-		parityCheck = 0;
-		parityBit = 0;
-		error = 0;
-		temp1 = 0;
-		temp2 = 0;
-		finalTag = 0;		
 		
 	}
 
