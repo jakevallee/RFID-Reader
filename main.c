@@ -79,9 +79,10 @@ int main(void) {
 	char manchDat[350];
 	char binDataC[149];
 	char printTag[10];
-	char test [11] = "Hello LOL ";
+	char test[10] = "\n\n\n\r";
 	char curVal;
 	char lastVal;
+	//int reset = 0;
 	int orig = 0;
 	int i = 0;
 	int j = 0;
@@ -91,8 +92,6 @@ int main(void) {
 	int parityCheck = 0;
 	int parityBit = 0;
 	int error = 0;
-	long long temp1 = 0;
-	long long temp2 = 0;
 	long long finalTag = 0;
 	
 	
@@ -126,11 +125,12 @@ int main(void) {
 	/* LCD initialization */
 	lcd_init(LCD_DISP_ON);
 	lcd_puts("RFID Tag");
-	
+	_delay_ms(100);
 
 	
 	while(1) {	//Loop forever
 		orig = 0;
+		//reset = 0;
 		i = 0;
 		j = 0;
 		start = 0;
@@ -139,10 +139,10 @@ int main(void) {
 		parityCheck = 0;
 		parityBit = 0;
 		error = 0;
-		temp1 = 0;
-		temp2 = 0;
 		finalTag = 0;		
-		
+		// initSpeaker();
+		// _delay_ms(100);
+		// stopSpeaker();
 		
 
 		
@@ -167,24 +167,11 @@ int main(void) {
 		}
 		
 		// First print block goes here
-		// _delay_ms(1000);
 		
-		/*
-		for(i=0;i<1500;i++){			//Because the USART transmission can only happen so fast
-			if(rawDat[i] == '1'){		//This for loop must be used in order to print the values 
-				// writeSER("1");
-				TransmitByte(rawDat[i]);
-			} else if(rawDat[i] == '0'){
-				TransmitByte(rawDat[i]);
-			} else {
-				TransmitByte(rawDat[i]);
-			}
-			_delay_ms(50);
-		}
-		*/
 		
 		// for(i=0;i<1500;i++){			//Updated UART; above code is outdated and will be moved later
 			// TransmitByte(rawDat[i]);
+			// _delay_ms(20);
 		// }
 		
 		
@@ -215,8 +202,9 @@ int main(void) {
 		}
 		
 		// Second print block goes here
-		
-		// printString("\n\n\n\r");
+		// for(i=0;i<10;i++){
+			// TransmitByte(test[i]);
+		// }
 		// for(i=0;i<350;i++){				
 			// TransmitByte(manchDat[i]);
 			// _delay_ms(10);
@@ -230,9 +218,7 @@ int main(void) {
 			if(manchDat[i] == manchDat[i+1]){
 				start = i+1;
 				break;
-			} else {
-				;
-			}
+			} else {}
 		}
 		
 		// The code below converts the manchester code into binary code
@@ -240,10 +226,10 @@ int main(void) {
 		for(i=start;i<350;i+=2){
 			
 			if(manchDat[i] == '0' && manchDat[i+1] != '0'){
-				binDataC[j] = '0';
+				binDataC[j] = '1';
 				j++;
 			} else if(manchDat[i] != '0' && manchDat[i+1] == '0'){
-				binDataC[j] = '1';
+				binDataC[j] = '0';
 				j++;
 			} else {
 				break;
@@ -252,7 +238,10 @@ int main(void) {
 		}
 		
 		// This block prints the binary code
-		// printString("1");
+
+		// for(i=0;i<10;i++){
+			// TransmitByte(test[i]);
+		// }
 		// for(i=0;i<149;i++){				
 			// TransmitByte(binDataC[i]);
 			// _delay_ms(10);
@@ -271,8 +260,18 @@ int main(void) {
 			} else {
 				sameNum = 0;
 			}
+
 		}
 		
+		// if((sameNum == 0) || (start <= 7)){
+			// reset = 1;		
+		// }
+		
+		// if((reset = 1)){
+			// continue;
+		// }
+		
+
 		/* //Used this code to confirm the value of start
 		for(i=0;i<100;i++){
 			if(i != start){
@@ -299,10 +298,19 @@ int main(void) {
 		}
 		
 		//This block prints the 55bit Tag
+		// for(i=0;i<10;i++){
+			// TransmitByte(test[i]);
+		// }		
 		// for(i=0;i<55;i++){				
 			// TransmitByte(binDataC[i]);
 			// _delay_ms(10);
 		// }		
+		
+		// redLED();
+		// _delay_ms(500);
+		// ledOFF();
+		// _delay_ms(500);
+
 		
 		// The next block processes the tag data and checks for a valid tag using the parity bits
 		j=0;
@@ -338,6 +346,11 @@ int main(void) {
 				break;
 			}
 		}
+		
+		// redLED();
+		// _delay_ms(1000);
+		// ledOFF();
+		// _delay_ms(1000);
 		
 		if(error == 0){					//Will tidy this up with a loop later.
 			binDataC[0] = binDataC[10];
@@ -386,44 +399,57 @@ int main(void) {
 				// _delay_ms(10);
 			// }
 			
+			// PORTB |= (1 << PB1);
+			// _delay_ms(1000);
+			// PORTB &= (0 << PB1);			
+			
 			i=0;
-			while(binDataC[i] != '\0')
-			{
+			while(binDataC[i] != '\0'){
+			
 				if(binDataC[i] == '1'){
 					finalTag |= 1;
 				}
-
 				i++;
 				if(binDataC[i] != '\0'){
 					finalTag <<= 1;
 				}
 			}			
 			
-			//finalTag = 8640206;
+			if(finalTag == 0){
+				goto end;
+			}
 			
 			ltoa(finalTag, printTag, 10);
 			//snprintf(printTag, "%lld", finalTag);
 			//sprintf(printTag, "%lli", finalTag);
 			
 			// printTag[10] = '\0';
-			for(i=0;i<32;i++){				
-				TransmitByte(binDataC[i]);
-				_delay_ms(10);
-			}			
+			
+			// for(i=0;i<32;i++){				
+				// TransmitByte(binDataC[i]);
+				// _delay_ms(10);
+			// }		
+			
 			//printTag[14] = '\0';
 			lcd_command(LCD_HOME);
+			initSpeaker();
 			lcd_puts(printTag);
-			// _delay_ms(3000);
+			_delay_ms(100);
+			stopSpeaker();
+			_delay_ms(1500);
+			lcd_command(LCD_CLR);			
+			lcd_command(LCD_HOME);
+			lcd_puts("\n");
+			lcd_puts(printTag);
+			for(i=0;i<33;i++){
+				binDataC[i] = '0';
+			}
 			
 		} else {
-			failSpeaker();
-			_delay_ms(250);
-			stopSpeaker();
-		}
-		
-		
-	}
 
+		}
+		end:;
+	} 
 	return(0);
 }
 void ledOFF(void){
