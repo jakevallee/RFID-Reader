@@ -1,12 +1,16 @@
 /*
-	RFID Code
-*/
+ * Author: Jacob Vallee
+ * Partner: Ben Rancourt
+ * Capstone: General Purpose RFID reader
+ * 
+ * This file contains the main function code for the RFID reader.
+ *
+ */
 
 #define F_CPU		10000000UL			//Define the CPU speed
 #define FOSC 		10000000
 #define BAUD 		9600
 #define MYUBRR		((FOSC/16/BAUD)-1)	//Equation from Datasheet
-#define SEND_SIZE	100					//Size of serial transmission 
 
 #include <string.h>
 #include <stdlib.h>
@@ -17,9 +21,10 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "lcd.h"
+#include "functions.h"
 
 /////////////////////////////////////////////////////////////////////////////
-// More Atmel Defines ///////////////////////////////////////////////////////
+///////////////////// Atmel Defines /////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
 /* UART Buffer Defines */
@@ -39,39 +44,6 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-char sendBUFFER[SEND_SIZE];
-uint8_t wrINDEX;
-uint8_t	rdINDEX;
-
-
-/* Atmel Static Variables */
-static volatile unsigned char UART_RxHead;
-static volatile unsigned char UART_RxTail;
-static unsigned char UART_TxBuf[UART_TX_BUFFER_SIZE];
-static volatile unsigned char UART_TxHead;
-static volatile unsigned char UART_TxTail;
-
-
-
-/* My Functions */
-void USART_Transmit( unsigned char data );
-void sendUSART(unsigned char data);
-void initUSART(void);
-void initComparator(void);
-void initPWM(void);
-void changeSER(char c);
-void writeSER(char c[]);
-void initSpeaker(void);
-void stopSpeaker(void);
-void failSpeaker(void);
-void printString(char* string);
-void redLED(void);
-void greenLED(void);
-void ledOFF(void);
-
-/* Atmel Functions */
-void TransmitByte(unsigned char data);
-void InitUART(unsigned char ubrr_val);
 
 int main(void) {
 
@@ -79,10 +51,8 @@ int main(void) {
 	char manchDat[350];
 	char binDataC[149];
 	char printTag[10];
-	char test[10] = "\n\n\n\r";
 	char curVal;
 	char lastVal;
-	//int reset = 0;
 	int orig = 0;
 	int i = 0;
 	int j = 0;
@@ -93,12 +63,14 @@ int main(void) {
 	int parityBit = 0;
 	int error = 0;
 	long long finalTag = 0;
+	//char test[10] = "\n\n\n\r";
+	//int reset = 0;
 	
 	
 	/* Set Port C pin PC5 as input to monitor the output of the comparator.*/
 	DDRC &= ~(1 << PC5);			
 	
-	/* Set Port B pin PB0 to output for Blue LED */
+	/* Set Port B pin PB0 and PB1 to output for LEDs */
 	DDRB |=  (1 << PB0);				
 	DDRB |=  (1 << PB1);
 	
@@ -116,21 +88,17 @@ int main(void) {
 	//initUSART();
 	InitUART(MYUBRR);
 	
-	/* Setup PWM */
+	/* Setup PWM for carrier signal */
 	initPWM();
-	
-	/* Setup Speaker */
-	//initSpeaker();
 	
 	/* LCD initialization */
 	lcd_init(LCD_DISP_ON);
-	lcd_puts("RFID Tag");
+	lcd_puts("RFID Tag:\n");
+	
 	_delay_ms(100);
-
 	
 	while(1) {	//Loop forever
 		orig = 0;
-		//reset = 0;
 		i = 0;
 		j = 0;
 		start = 0;
@@ -140,11 +108,7 @@ int main(void) {
 		parityBit = 0;
 		error = 0;
 		finalTag = 0;		
-		// initSpeaker();
-		// _delay_ms(100);
-		// stopSpeaker();
 		
-
 		
 		for(i = 0; i < 1500; i++){	//used to fill buffer with data from comparator
 			if(PINC & (1<<PC5)){
@@ -153,7 +117,6 @@ int main(void) {
 				rawDat[i] = '0';
 			}
 			_delay_us(50);
-			
 		}
 		
 		i = 0;
@@ -167,9 +130,7 @@ int main(void) {
 		}
 		
 		// First print block goes here
-		
-		
-		// for(i=0;i<1500;i++){			//Updated UART; above code is outdated and will be moved later
+		// for(i=0;i<1500;i++){		
 			// TransmitByte(rawDat[i]);
 			// _delay_ms(20);
 		// }
@@ -177,7 +138,6 @@ int main(void) {
 		
 		j = 0;
 		sameNum = 0;		
-		
 		lastVal = rawDat[start];
 		for(i=start;i<(1500-start);i++){
 			curVal = rawDat[i];
@@ -211,10 +171,9 @@ int main(void) {
 		// }
 		
 		// Next piece of code needs to find the first double bit to use as a reference
-		// this is because the state cannot stay the same through an entire cycle. there must be a transition.
+		// this is because the state cannot stay the same through an entire cycle. There must be a transition.
 		
 		for(i=0;i<350;i++){
-			
 			if(manchDat[i] == manchDat[i+1]){
 				start = i+1;
 				break;
@@ -224,7 +183,6 @@ int main(void) {
 		// The code below converts the manchester code into binary code
 		j = 0;
 		for(i=start;i<350;i+=2){
-			
 			if(manchDat[i] == '0' && manchDat[i+1] != '0'){
 				binDataC[j] = '1';
 				j++;
@@ -306,12 +264,6 @@ int main(void) {
 			// _delay_ms(10);
 		// }		
 		
-		// redLED();
-		// _delay_ms(500);
-		// ledOFF();
-		// _delay_ms(500);
-
-		
 		// The next block processes the tag data and checks for a valid tag using the parity bits
 		j=0;
 		error = 0;
@@ -347,12 +299,7 @@ int main(void) {
 			}
 		}
 		
-		// redLED();
-		// _delay_ms(1000);
-		// ledOFF();
-		// _delay_ms(1000);
-		
-		if(error == 0){					//Will tidy this up with a loop later.
+		if(error == 0){					//This code reuses the binDataC variable and stores only the 32 bit tag followed by a NULL character.
 			binDataC[0] = binDataC[10];
 			binDataC[1] = binDataC[11];
 			binDataC[2] = binDataC[12];
@@ -391,7 +338,6 @@ int main(void) {
 			
 			// Now just the 8H section of the tag is stored in binDataC[0-31]
 			// This data can now be converted from binary to decimal and displayed. 
-			//sscanf(binDataC, "%lld", &binTag);
 
 			//Prints Final Binary Tag
 			// for(i=0;i<32;i++){				
@@ -399,13 +345,10 @@ int main(void) {
 				// _delay_ms(10);
 			// }
 			
-			// PORTB |= (1 << PB1);
-			// _delay_ms(1000);
-			// PORTB &= (0 << PB1);			
 			
+			//The code below converts the binary char data into a decimal value
 			i=0;
 			while(binDataC[i] != '\0'){
-			
 				if(binDataC[i] == '1'){
 					finalTag |= 1;
 				}
@@ -415,251 +358,51 @@ int main(void) {
 				}
 			}			
 			
+			//Dont print a tag of all 0s
 			if(finalTag == 0){
-				goto end;
+				continue;
 			}
 			
+			//This converts the decimal value into a char array that can be printed
 			ltoa(finalTag, printTag, 10);
-			//snprintf(printTag, "%lld", finalTag);
-			//sprintf(printTag, "%lli", finalTag);
-			
-			// printTag[10] = '\0';
 			
 			// for(i=0;i<32;i++){				
 				// TransmitByte(binDataC[i]);
 				// _delay_ms(10);
 			// }		
 			
-			//printTag[14] = '\0';
-			lcd_command(LCD_HOME);
 			initSpeaker();
+			redLED();
+			lcd_command(LCD_HOME);
+			lcd_puts("RFID Tag:\n");			
 			lcd_puts(printTag);
 			_delay_ms(100);
 			stopSpeaker();
+			ledOFF();
 			_delay_ms(1500);
-			lcd_command(LCD_CLR);			
-			lcd_command(LCD_HOME);
-			lcd_puts("\n");
-			lcd_puts(printTag);
-			for(i=0;i<33;i++){
+
+			
+			
+			//Clear all of the variables.
+			//This needs to be done in order to prevent 
+			//the same tag from continuously being read.
+			for(i=0;i<1500;i++){
+				rawDat[i] = '0';
+			}
+			for(i=0;i<350;i++){
+				manchDat[i] = '0';
+			}
+			for(i=0;i<149;i++){
 				binDataC[i] = '0';
+			}
+			for(i=0;i<10;i++){
+				printTag[i] = '0';
 			}
 			
 		} else {
 
 		}
-		end:;
+		
 	} 
 	return(0);
-}
-void ledOFF(void){
-	PORTB &= (0 << PB0);
-	
-}
-
-void redLED(void){
-	PORTB |= (1 << PB0);
-}
-
-void greenLED(void){
-	PORTB |= (1 << PB1);	
-}
-
-/*
-ISR(USART_TX_vect){
-	
-	if(rdINDEX != wrINDEX){
-		UDR0 = sendBUFFER[rdINDEX];
-		rdINDEX++;
-		
-		if(rdINDEX >= SEND_SIZE){
-			rdINDEX = 0;
-		}
-	}
-}
-*/
-void printString(char* string){
-	
-	while(*string != 0x00){			//Becasue the string has a null terminating character just look for that
-		TransmitByte(*string);
-		string++;					//and increment through the pointer here. 
-	}
-	
-}
-
-void changeSER(char c){
-	
-	sendBUFFER[wrINDEX] = c;
-	wrINDEX++;
-	
-	if(wrINDEX >= SEND_SIZE){
-		wrINDEX = 0;
-	}
-	
-}
-
-void writeSER(char c[]){
-	uint8_t i = 0;
-	
-	
-	for(i = 0; i < strlen(c); i++){
-		changeSER(c[i]);
-	}
-	
-	if(UCSR0A & (1<<UDRE0)){
-		UDR0 = 0;
-	}
-	
-}
-
-/*
-void USART_Transmit( unsigned char data ){	//Function from datasheet
- // Wait for empty transmit buffer 
- while ( !( UCSR0A & (1<<UDRE0)) );
- 
- // Put data into buffer, sends the data 
- UDR0 = data;
-}
-*/
-
-/*
-void initUSART(void){
-	
-	UBRR0H = (unsigned char)(MYUBRR>>8);
-	UBRR0L =  (unsigned char)MYUBRR;
-	
-	UCSR0B = (1<<TXEN0)|(1<<TXCIE0);
-	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
-	
-}
-*/
-
-void initPWM(void){
-	
-	//////////////////////////
-	//	Setup PWM on PD3,	//
-	//	50% Duty Cycle,  	//
-	//	125kHz,				//
-	//////////////////////////
-	
-	TCCR2A |= (1<<COM2A1);	//Set Non-inverting mode
-	TCCR2A |= (1<<COM2B1);	//Set Non-inverting mode
-	TCCR2A |= (1<<WGM21);	//Fast PWM with top 0xFF
-	TCCR2A |= (1<<WGM20);	//'' 
-	
-	
-	TCCR2B |= (1<<WGM22);
-	TCCR2B |= (1<<CS20);
-	OCR2A = 79;				//output compare, 50% duty cycle. 
-	OCR2B = 39;	
-	
-	//PORTB |= (1 << PB0);
-	//PORTB |= (1 << PB1);	
-}
-
-void initSpeaker(void) {
-	
-	
-	//////////////////////////
-	//	Setup PWM on PB2,	//
-	//						//
-	//////////////////////////
-	
-	TCCR1A |= (1<<COM1A1);	//Set Non-inverting mode
-	TCCR1A |= (1<<COM1B1);	//Set Non-inverting mode
-	
-	TCCR1A |= (1<<WGM11);	//Fast PWM with top 0x03FF
-	TCCR1A |= (1<<WGM10);	//'' 
-	TCCR1B |= (1<<WGM12);	//''
-	
-	TCCR1B |= (1<<CS11);	//Sets prescalar (clk/8) and starts PWM
-	
-	//ICR1 = 1500;
-	OCR1B = 100;			//Used to set Duty Cycle
-	
-}
-
-void failSpeaker(void){
-	
-	//////////////////////////
-	//	Setup PWM on PB2,	//
-	//	play a tone for 	//
-	//	unsuccessful read	//
-	//////////////////////////
-	
-	TCCR1A |= (1<<COM1A1);			//Set Non-inverting mode
-	TCCR1A |= (1<<COM1B1);			//Set Non-inverting mode
-	
-	TCCR1A |= (1<<WGM11);			//Fast PWM with top 0x03FF
-	TCCR1A |= (1<<WGM10);			//'' 
-	TCCR1B |= (1<<WGM12);			//''
-	
-	TCCR1B |= (1<<CS11)|(1<<CS10);	//Sets prescalar (clk/64) and starts PWM
-	
-	//ICR1 = 1500;
-	OCR1B = 100;			//Used to set Duty Cycle	
-	
-}
-
-void stopSpeaker(void){
-	
-	TCCR1B &= (0<<CS21)|(0<<CS11)|(0<<CS10);	//disables PWM
-	
-}
-///////////////////////////////////////////////////////////////
-/* Atmel Functions Below */
-
-ISR(USART_UDRE_vect){
-	unsigned char tmptail;
-
-	/* Check if all data is transmitted */
-	if (UART_TxHead != UART_TxTail) {
-		/* Calculate buffer index */
-		tmptail = ( UART_TxTail + 1 ) & UART_TX_BUFFER_MASK;
-		/* Store new index */
-		UART_TxTail = tmptail;      
-		/* Start transmission */
-		UDR0 = UART_TxBuf[tmptail];
-	} else {
-		/* Disable UDRE interrupt */
-		UCSR0B &= ~(1<<UDRIE0);        
-	}
-}
-
-
-
-void InitUART(unsigned char ubrr_val)
-{
-	unsigned char x;
-
-	/* Set the baud rate */
-	UBRR0H = (unsigned char)(ubrr_val>>8);
-	UBRR0L = (unsigned char)ubrr_val;
-	/* Enable UART receiver and transmitter */
-	UCSR0B = ((1<<RXEN0) | (1<<TXEN0) | (1<<RXCIE0));
-
-	/* Flush receive buffer */
-	x = 0; 			    
-
-	UART_RxTail = x;
-	UART_RxHead = x;
-	UART_TxTail = x;
-	UART_TxHead = x;
-}
-
-
-
-void TransmitByte(unsigned char data){
-	unsigned char tmphead;
-	
-	/* Calculate buffer index */
-	tmphead = (UART_TxHead + 1) & UART_TX_BUFFER_MASK;
-	/* Wait for free space in buffer */
-	while (tmphead == UART_TxTail);
-	/* Store data in buffer */
-	UART_TxBuf[tmphead] = data;
-	/* Store new index */
-	UART_TxHead = tmphead;
-	/* Enable UDRE interrupt */
-	UCSR0B |= (1<<UDRIE0);
 }

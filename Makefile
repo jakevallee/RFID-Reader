@@ -12,7 +12,7 @@ OBJCOPY= avr-objcopy
 .PHONY : flash erase clean fuses
 
 $(TARGET).obj : $(TARGET).o
-	$(CC) $(CFLAGS) lcd.c $< -o $@
+	$(CC) $(CFLAGS) lcd.c functions.c $< -o $@
 	
 $(TARGET).hex: $(TARGET).obj
 	$(OBJCOPY) -R .eeprom -O ihex $< $@
